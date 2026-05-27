@@ -209,8 +209,8 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
   return null;
 }
 
-// 🔦 True First-Person Flashlight
-function Flashlight() {
+// 🔦 Flashlight (Now supports total blackout)
+function Flashlight({ isBlackout }) {
   const lightRigRef = useRef(null);
   const spotRef = useRef(null);
   const { camera, scene } = useThree();
@@ -234,23 +234,32 @@ function Flashlight() {
       <spotLight
         ref={spotRef}
         color="#f8f8ff"
-        intensity={500}
+        intensity={isBlackout ? 0 : 500}
         angle={Math.PI / 8}
         penumbra={0.4}
         distance={150}
         decay={2}
       />
-      <pointLight intensity={30} distance={5} color="#ffffff" />
+      <pointLight intensity={isBlackout ? 0 : 30} distance={5} color="#ffffff" />
     </group>
   );
 }
 
 // 🛏️ STAGE 1: Kolej Kediaman Ke-1 (Dorm Room)
 function DormRoom({ onObjectClick, inventory, onEscape }) {
+  const ambientRef = useRef();
+
+  // HORROR EVENT: Flickering Lights
+  useFrame(() => {
+    if (ambientRef.current) {
+      ambientRef.current.intensity = Math.random() > 0.95 ? 0.01 : 0.06;
+    }
+  });
+
   const handleDoorClick = (e) => {
     e.stopPropagation();
     if (inventory.includes('Keycard')) {
-      onEscape(); // Go to Stage 2!
+      onEscape(); // Trigger Transition!
     } else {
       alert("The door is locked tight. The keypad requires a Campus Keycard.");
     }
@@ -258,7 +267,7 @@ function DormRoom({ onObjectClick, inventory, onEscape }) {
 
   return (
     <group>
-      <ambientLight intensity={0.05} />
+      <ambientLight ref={ambientRef} intensity={0.06} />
       
       {/* The Room Shell */}
       <mesh scale={[-10, -10, -10]}>
@@ -271,7 +280,6 @@ function DormRoom({ onObjectClick, inventory, onEscape }) {
         <boxGeometry args={[2.5, 4, 0.2]} />
         <meshStandardMaterial color="#2a1f1a" roughness={0.9} />
       </mesh>
-      {/* Door Handle */}
       <mesh position={[0.8, -0.5, 4.8]}>
         <boxGeometry args={[0.1, 0.4, 0.1]} />
         <meshStandardMaterial color="#888" metalness={0.8} />
@@ -295,6 +303,12 @@ function DormRoom({ onObjectClick, inventory, onEscape }) {
         </mesh>
       </group>
 
+      {/* LORE: Roommate's Diary */}
+      <mesh position={[1.2, -1.0, -2.6]} onClick={(e) => { e.stopPropagation(); onObjectClick('diary'); }}>
+        <boxGeometry args={[0.4, 0.05, 0.6]} />
+        <meshStandardMaterial color="#882222" />
+      </mesh>
+
       {/* Decorative Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]}>
         <planeGeometry args={[10, 10]} />
@@ -312,12 +326,9 @@ function StaffPatrol({ onCaught, onEnemyPositionUpdate }) {
 
   useFrame((state) => {
     if (!staffRef.current || hasCaughtRef.current) return;
-
     const patrolZ = Math.sin(state.clock.elapsedTime) * STAFF_PATROL_DISTANCE;
     staffRef.current.position.set(STAFF_PATROL_X, 0, patrolZ);
-
     onEnemyPositionUpdate?.(staffRef.current.position.x, staffRef.current.position.z);
-
     const distance = staffRef.current.position.distanceTo(camera.position);
     if (distance < STAFF_CATCH_DISTANCE) {
       hasCaughtRef.current = true;
@@ -337,7 +348,7 @@ function StaffPatrol({ onCaught, onEnemyPositionUpdate }) {
 }
 
 // 📚 STAGE 3 Main Layout
-function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory, onBookCollect }) {
+function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory, onBookCollect, isBlackout }) {
   const [bookPlacements, setBookPlacements] = useState(null);
 
   useEffect(() => {
@@ -358,22 +369,19 @@ function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory
         geometry: [0.1, 0.6, 0.4] 
       };
     });
-
     setBookPlacements(placements);
   }, []);
 
   return (
     <group>
-      <ambientLight intensity={0.03} />
+      <ambientLight intensity={isBlackout ? 0 : 0.03} />
       <StaffPatrol onCaught={onCaught} onEnemyPositionUpdate={onEnemyPositionUpdate} />
 
-      {/* Large dark room shell */}
       <mesh scale={[-28, -16, -56]} position={[0, 4, -4]}>
         <boxGeometry />
         <meshStandardMaterial color="#060608" side={2} />
       </mesh>
 
-      {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -4, -4]}>
         <planeGeometry args={[28, 52]} />
         <meshStandardMaterial color="#0a0a0e" roughness={0.95} />
@@ -382,70 +390,35 @@ function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory
       {/* Towering bookshelves */}
       {LIBRARY_BOOKSHELVES.map((shelf) => (
         <mesh key={shelf.id} position={[shelf.x, 0, shelf.z]}>
-          <boxGeometry
-            args={[
-              LIBRARY_BOOKSHELF_DIMENSIONS.width,
-              LIBRARY_BOOKSHELF_DIMENSIONS.height,
-              LIBRARY_BOOKSHELF_DIMENSIONS.depth,
-            ]}
-          />
+          <boxGeometry args={[ LIBRARY_BOOKSHELF_DIMENSIONS.width, LIBRARY_BOOKSHELF_DIMENSIONS.height, LIBRARY_BOOKSHELF_DIMENSIONS.depth ]} />
           <meshStandardMaterial color="#12141a" roughness={0.92} metalness={0.05} />
         </mesh>
       ))}
 
-      {/* Librarian desk & terminal — near spawn */}
+      {/* Librarian desk & terminal */}
       <mesh position={[0, -2, -4]}>
         <boxGeometry args={[3, 1, 1.5]} />
         <meshStandardMaterial color="#222222" />
       </mesh>
-      <mesh
-        position={[0, -1.1, -4.2]}
-        rotation={[-0.1, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onObjectClick('library_terminal');
-        }}
-      >
+      <mesh position={[0, -1.1, -4.2]} rotation={[-0.1, 0, 0]} onClick={(e) => { e.stopPropagation(); onObjectClick('library_terminal'); }}>
         <boxGeometry args={[1.2, 0.8, 0.1]} />
-        <meshStandardMaterial
-          color="#111111"
-          emissive="#00ff00"
-          emissiveIntensity={1.5}
-        />
+        <meshStandardMaterial color="#111111" emissive="#00ff00" emissiveIntensity={isBlackout ? 0 : 1.5} />
       </mesh>
 
-      {/* Hidden book spines - ONLY render if not in inventory! */}
+      {/* Hidden books */}
       {bookPlacements && bookPlacements.map((book) => {
         if (inventory.includes(book.title)) return null; 
-        
         return (
-          <mesh
-            key={book.id}
-            position={book.position}
-            onClick={(e) => {
-              e.stopPropagation();
-              onObjectClick(book.id);
-              onBookCollect(book.title);
-            }}
-          >
+          <mesh key={book.id} position={book.position} onClick={(e) => { e.stopPropagation(); onObjectClick(book.id); onBookCollect(book.title); }}>
             <boxGeometry args={book.geometry} />
-            <meshStandardMaterial
-              color={book.color}
-              emissive={book.emissive}
-              emissiveIntensity={0.8}
-            />
+            <meshStandardMaterial color={book.color} emissive={book.emissive} emissiveIntensity={isBlackout ? 0 : 0.8} />
           </mesh>
         );
       })}
 
-      {/* Archive door — maze end */}
+      {/* Archive door */}
       <group position={[0, -1, -19.5]}>
-        <mesh
-          onClick={(e) => {
-            e.stopPropagation();
-            onObjectClick('archive_keypad');
-          }}
-        >
+        <mesh onClick={(e) => { e.stopPropagation(); onObjectClick('archive_keypad'); }}>
           <boxGeometry args={[3.2, 5.5, 0.35]} />
           <meshStandardMaterial color="#3d4248" metalness={0.92} roughness={0.38} />
         </mesh>
@@ -455,12 +428,7 @@ function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory
         </mesh>
         <mesh position={[0, 2.2, 0.22]}>
           <boxGeometry args={[2.4, 0.5, 0.08]} />
-          <meshStandardMaterial
-            color="#1a1a1e"
-            emissive="#440000"
-            emissiveIntensity={0.4}
-            metalness={0.7}
-          />
+          <meshStandardMaterial color="#1a1a1e" emissive="#440000" emissiveIntensity={isBlackout ? 0 : 0.4} metalness={0.7} />
         </mesh>
       </group>
     </group>
@@ -469,6 +437,19 @@ function MainLibrary({ onObjectClick, onCaught, onEnemyPositionUpdate, inventory
 
 // 🏛️ STAGE 2: The Haunted Lecture Hall
 function LectureHall({ onObjectClick }) {
+  const chairsGroupRef = useRef();
+
+  // HORROR EVENT: Chairs moving by themselves
+  useFrame(({ clock }) => {
+    if (chairsGroupRef.current) {
+      chairsGroupRef.current.children.forEach((chair, i) => {
+        if (i % 3 === 0) { // Only animate some chairs to make it creepy
+          chair.position.y = -3.5 + Math.floor(i / 7) * 0.5 + Math.sin(clock.elapsedTime * 2 + i) * 0.1;
+        }
+      });
+    }
+  });
+
   const seats = [];
   for (let row = 0; row < 5; row++) {
     for (let col = -3; col <= 3; col++) {
@@ -495,7 +476,9 @@ function LectureHall({ onObjectClick }) {
         <meshStandardMaterial color="#0d0d12" />
       </mesh>
 
-      {seats}
+      <group ref={chairsGroupRef}>
+        {seats}
+      </group>
 
       <mesh position={[0, 2, -19]} onClick={(e) => { e.stopPropagation(); onObjectClick('projector'); }}>
         <planeGeometry args={[16, 9]} />
@@ -515,8 +498,10 @@ const PROJECTOR_CORRECT_ORDER = ['experiment', 'missing', 'coverup'];
 
 const CINEMATIC_LINES = [
   'Files uploaded to University database.',
-  'Campus emergency alarms echo in the distance.',
-  'Near the exit, Maya stands silently beneath the dim light. She smiles faintly before disappearing.',
+  'PROJECT 313: SUBJECT M.R. — LEAD RESEARCHER: [YOUR PARENT\'S NAME REDACTED]',
+  'The hallucinations... the missing students... it was them.',
+  'Maya\'s spirit guided you here to expose the truth.',
+  'Campus emergency alarms echo in the distance. As you escape, Maya smiles and fades away.',
   'Some truths refuse to stay buried.',
 ];
 
@@ -525,19 +510,12 @@ function EndingCinematic({ onPlayAgain }) {
     <div className="ending-cinematic">
       <div className="ending-cinematic-text">
         {CINEMATIC_LINES.map((line, index) => (
-          <p
-            key={line}
-            className={`ending-cinematic-line ending-cinematic-line--${index + 1}`}
-          >
+          <p key={line} className={`ending-cinematic-line ending-cinematic-line--${index + 1}`}>
             {line}
           </p>
         ))}
       </div>
-      <button
-        type="button"
-        className="ending-cinematic-play"
-        onClick={onPlayAgain}
-      >
+      <button type="button" className="ending-cinematic-play" onClick={onPlayAgain}>
         Play Again
       </button>
     </div>
@@ -561,6 +539,12 @@ export default function App() {
   const [enemyPosition, setEnemyPosition] = useState(() => normalizeLibraryPosition(STAFF_PATROL_X, 0));
   const [isGameOver, setIsGameOver] = useState(false);
   const [libraryResetNonce, setLibraryResetNonce] = useState(0);
+  
+  // New States for Lore & Horror
+  const [transitionState, setTransitionState] = useState(null); // 'toStage2', 'toStage3'
+  const [showKnock, setShowKnock] = useState(false);
+  const [isBlackout, setIsBlackout] = useState(false);
+
   const sequenceErrorTimerRef = useRef(null);
   const objectiveTimerRef = useRef(null);
 
@@ -585,17 +569,28 @@ export default function App() {
     if (objectiveTimerRef.current) {
       clearTimeout(objectiveTimerRef.current);
     }
-
     objectiveTimerRef.current = setTimeout(() => {
       setObjectiveText('');
       objectiveTimerRef.current = null;
     }, 5000);
 
-    return () => {
-      if (objectiveTimerRef.current) {
-        clearTimeout(objectiveTimerRef.current);
-      }
-    };
+    // HORROR EVENT: Door Knocks (Stage 1)
+    if (currentStage === 1) {
+      const knockTimer = setTimeout(() => {
+        setShowKnock(true);
+        setTimeout(() => setShowKnock(false), 2000);
+      }, 12000);
+      return () => clearTimeout(knockTimer);
+    }
+
+    // HORROR EVENT: Library Blackout (Stage 3)
+    if (currentStage === 3) {
+      const blackoutTimer = setTimeout(() => {
+        setIsBlackout(true);
+        setTimeout(() => setIsBlackout(false), 3000);
+      }, 15000); // 15 seconds after entering
+      return () => clearTimeout(blackoutTimer);
+    }
   }, [currentStage]);
 
   const handlePlayerPositionUpdate = useCallback((x, z) => {
@@ -618,9 +613,6 @@ export default function App() {
     setLibraryResetNonce((n) => n + 1);
     setPlayerPosition(normalizeLibraryPosition(0, 14));
     setEnemyPosition(normalizeLibraryPosition(STAFF_PATROL_X, 0));
-    
-    // 🔥 Remove books from inventory so the player has to find them again! 
-    // We only keep the Keycard from Stage 1.
     setInventory((prev) => prev.filter((item) => item === 'Keycard'));
   };
 
@@ -645,7 +637,6 @@ export default function App() {
   // Whisper Effect Logic
   useEffect(() => {
     if (isGameBeaten || isGameOver) return;
-
     let showTimer, hideTimer;
     const scheduleWhisper = () => {
       const nextDelay = 15000 + Math.random() * 15000;
@@ -701,9 +692,14 @@ export default function App() {
     setFileSequence(nextSequence);
 
     if (nextSequence.length === PROJECTOR_CORRECT_ORDER.length) {
-      setCurrentStage(3);
+      // TRANSITION to Stage 3
       setActiveOverlay(null);
       resetProjectorPuzzle();
+      setTransitionState('toStage3');
+      setTimeout(() => {
+        setCurrentStage(3);
+        setTransitionState(null);
+      }, 5000);
     }
   };
 
@@ -735,41 +731,58 @@ export default function App() {
 
   return (
     <div className="game-container">
+      
+      {/* 🎬 CINEMATIC TRANSITIONS OVERLAY */}
+      {transitionState === 'toStage2' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, backgroundColor: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: '"Courier New", monospace', fontSize: '1.2rem', animation: 'lightningFlash 4s forwards', padding: '2rem', textAlign: 'center' }}>
+          <style>{`@keyframes lightningFlash { 0% { background: white; color: black; } 10% { background: black; color: white; } 15% { background: white; color: black; } 25% { background: black; color: white; } 100% { background: black; color: white; opacity: 1; } }`}</style>
+          <div>
+            <p>You swipe the keycard and the door clicks open.</p>
+            <p style={{ marginTop: '20px', color: '#ff4444', fontStyle: 'italic' }}>As lightning flashes, a girl stands silently at the end of the hallway...</p>
+            <p style={{ marginTop: '20px' }}>When the darkness returns, she is gone.</p>
+          </div>
+        </div>
+      )}
+      
+      {transitionState === 'toStage3' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, backgroundColor: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: '"Courier New", monospace', fontSize: '1.2rem', animation: 'fadeInOut 5s forwards', padding: '2rem', textAlign: 'center' }}>
+          <style>{`@keyframes fadeInOut { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }`}</style>
+          <div>
+            <p style={{ color: '#ff4444' }}>"THE LIBRARY KNOWS."</p>
+            <p style={{ marginTop: '20px' }}>A heavy mechanical grinding echoes behind the lecture hall stage.</p>
+            <p style={{ marginTop: '20px', fontStyle: 'italic' }}>A hidden staircase reveals itself, descending into the dark...</p>
+          </div>
+        </div>
+      )}
+
+      {/* HORROR UI EVENT */}
+      {showKnock && (
+        <div style={{ position: 'fixed', top: '20%', width: '100%', textAlign: 'center', zIndex: 200, color: 'white', fontSize: '2rem', fontWeight: 'bold', textShadow: '0 0 20px red', fontFamily: '"Courier New", monospace', pointerEvents: 'none', animation: 'glitchFade 2s forwards' }}>
+          * KNOCK ... KNOCK ... KNOCK *
+        </div>
+      )}
+
       {!isGameOver && (
         <div className="canvas-container">
           <Canvas camera={{ position: [0, 0, 0], fov: 75 }}>
             <PointerLockControls />
-            <Player
-              stage={currentStage}
-              resetNonce={libraryResetNonce}
-              onPositionUpdate={currentStage === 3 ? handlePlayerPositionUpdate : undefined}
-            />
-            <Flashlight />
+            <Player stage={currentStage} resetNonce={libraryResetNonce} onPositionUpdate={currentStage === 3 ? handlePlayerPositionUpdate : undefined} />
+            <Flashlight isBlackout={isBlackout} />
 
-            {/* Game State Rendering */}
             {currentStage === 1 && (
-              <DormRoom
-                inventory={inventory}
-                onObjectClick={setActiveOverlay}
-                onEscape={() => setCurrentStage(2)}
-              />
+              <DormRoom inventory={inventory} onObjectClick={setActiveOverlay} onEscape={() => {
+                setTransitionState('toStage2');
+                setTimeout(() => {
+                  setCurrentStage(2);
+                  setTransitionState(null);
+                }, 4000);
+              }} />
             )}
-            {currentStage === 2 && (
-              <LectureHall onObjectClick={setActiveOverlay} />
-            )}
+            {currentStage === 2 && <LectureHall onObjectClick={setActiveOverlay} />}
             {currentStage === 3 && (
-              <MainLibrary
-                key={libraryResetNonce}
-                inventory={inventory}
-                onObjectClick={setActiveOverlay}
-                onCaught={handleStaffCaught}
-                onEnemyPositionUpdate={handleEnemyPositionUpdate}
-                onBookCollect={(title) => {
-                  if (!inventory.includes(title)) {
-                    setInventory([...inventory, title]);
-                  }
-                }}
-              />
+              <MainLibrary key={libraryResetNonce} inventory={inventory} onObjectClick={setActiveOverlay} onCaught={handleStaffCaught} onEnemyPositionUpdate={handleEnemyPositionUpdate} isBlackout={isBlackout} onBookCollect={(title) => {
+                if (!inventory.includes(title)) setInventory([...inventory, title]);
+              }} />
             )}
           </Canvas>
         </div>
@@ -778,13 +791,10 @@ export default function App() {
       {isGameOver && (
         <div className="game-over-overlay">
           <p className="game-over-text">CAUGHT. YOU BECOME ANOTHER MISSING STUDENT.</p>
-          <button type="button" className="game-over-restart" onClick={handleRestartStage}>
-            Restart Stage
-          </button>
+          <button type="button" className="game-over-restart" onClick={handleRestartStage}>Restart Stage</button>
         </div>
       )}
 
-      {/* HUD Layer */}
       {!isGameOver && (
       <div className="hud-layer">
         <h2>
@@ -793,7 +803,6 @@ export default function App() {
           {currentStage === 3 && 'Perpustakaan Utama'}
         </h2>
         
-        {/* 🔥 Updated Vertical, Clickable Inventory */}
         <div className="inventory-box">
           <p style={{ margin: '0 0 10px 0' }}>Inventory:</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
@@ -801,25 +810,9 @@ export default function App() {
               <span>Empty</span>
             ) : (
               inventory.map((item) => {
-                // Check if this item is one of our books to make it clickable
                 const book = LIBRARY_HIDDEN_BOOKS.find(b => b.title === item);
-                
                 return (
-                  <button
-                    key={item}
-                    className="item-tag"
-                    onClick={() => {
-                      if (book) setActiveOverlay(book.id);
-                    }}
-                    style={{
-                      border: 'none',
-                      color: 'white',
-                      fontFamily: 'inherit',
-                      textAlign: 'left',
-                      cursor: book ? 'pointer' : 'default', // Only books get the hand cursor
-                      width: '100%',
-                    }}
-                  >
+                  <button key={item} className="item-tag" onClick={() => { if (book) setActiveOverlay(book.id); }} style={{ border: 'none', color: 'white', fontFamily: 'inherit', textAlign: 'left', cursor: book ? 'pointer' : 'default', width: '100%' }}>
                     {item}
                   </button>
                 );
@@ -834,52 +827,37 @@ export default function App() {
         {currentStage === 3 && (
           <div className="minimap-container" aria-label="Library survival radar">
             {LIBRARY_BOOKSHELVES.map((shelf) => (
-              <div
-                key={shelf.id}
-                className="minimap-shelf"
-                style={getBookshelfMinimapStyle(shelf)}
-              />
+              <div key={shelf.id} className="minimap-shelf" style={getBookshelfMinimapStyle(shelf)} />
             ))}
-            <div
-              className="enemy-blip"
-              style={{
-                left: `${enemyPosition.x * 100}%`,
-                top: `${enemyPosition.z * 100}%`,
-              }}
-            />
-            <div
-              className="player-blip"
-              style={{
-                left: `${playerPosition.x * 100}%`,
-                top: `${playerPosition.z * 100}%`,
-              }}
-            />
+            <div className="enemy-blip" style={{ left: `${enemyPosition.x * 100}%`, top: `${enemyPosition.z * 100}%` }} />
+            <div className="player-blip" style={{ left: `${playerPosition.x * 100}%`, top: `${playerPosition.z * 100}%` }} />
           </div>
         )}
       </div>
       )}
 
       {!isGameOver && <div className="crosshair" aria-hidden="true" />}
+      {objectiveText && <p key={objectiveText} className="objective-banner">{objectiveText}</p>}
+      {!isGameOver && <div className={`whisper-overlay ${showWhisper ? 'visible' : ''}`}>Maya is watching...</div>}
 
-      {objectiveText && (
-        <p key={objectiveText} className="objective-banner">
-          {objectiveText}
-        </p>
-      )}
-
-      {/* Horror Overlay */}
-      {!isGameOver && (
-        <div className={`whisper-overlay ${showWhisper ? 'visible' : ''}`}>
-          Maya is watching...
-        </div>
-      )}
-
-      {/* Interactive Puzzles Layer */}
       {!isGameOver && activeOverlay && (
         <div className="overlay-screen">
           <div className="overlay-content">
             <button className="close-btn" onClick={closeOverlay}>✕ Close</button>
             
+            {/* NEW LORE OVERLAY */}
+            {activeOverlay === 'diary' && (
+              <div className="puzzle-box">
+                <h3 style={{ color: '#ff6666' }}>Roommate's Diary</h3>
+                <blockquote className="diary-clue" style={{ fontSize: '1.1rem', marginTop: '20px' }}>
+                  "I keep hearing whispers from the Dewan Kuliah... Maya went there last week and never came back."
+                </blockquote>
+                <blockquote className="diary-clue" style={{ fontSize: '1.1rem' }}>
+                  "If you are reading this, <strong style={{ color: 'red' }}>DON'T TRUST THE RECORDS.</strong> The answers are hidden in the timetable subjects. Look at the numbers."
+                </blockquote>
+              </div>
+            )}
+
             {activeOverlay === 'locker' && (
               <div className="puzzle-box">
                 <h3>Old Student Locker</h3>
@@ -975,9 +953,7 @@ export default function App() {
                     <span>UM_SECURE_ARCHIVE // RECOVERY_MODE</span>
                   </div>
                   <p className="terminal-prompt">&gt; REBUILD_TIMELINE.exe --corrupted</p>
-                  <p className="terminal-subtext">
-                    Three fragments detected. Reconstruct chronological sequence to decrypt.
-                  </p>
+                  <p className="terminal-subtext">Three fragments detected. Reconstruct chronological sequence to decrypt.</p>
                   <div className="terminal-sequence">
                     SEQUENCE: [{fileSequence.map((id) => id.toUpperCase()).join(' → ') || 'AWAITING INPUT'}]
                   </div>
@@ -1000,11 +976,7 @@ export default function App() {
                       );
                     })}
                   </ul>
-                  {sequenceError && (
-                    <p className="terminal-error" role="alert">
-                      ACCESS DENIED - SEQUENCE ERROR
-                    </p>
-                  )}
+                  {sequenceError && <p className="terminal-error" role="alert">ACCESS DENIED - SEQUENCE ERROR</p>}
                 </div>
               </div>
             )}
