@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 body, html, #root {
   margin: 0;
   padding: 0;
@@ -24,10 +25,22 @@ body, html, #root {
   inset: 0;
   background: #000000;
   z-index: 200;
+=======
+/* Full-screen wrapper for absolute layout positioning */
+.main-menu-overlay,
+.storyline-intro-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 300; /* Must sit higher than .canvas-container (z-index: 1) and standard HUD */
+  background-color: #050508;
+>>>>>>> e3799e985c6dfb9904d60010298f082dcb404b1d
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   gap: 3rem;
   padding: 2rem;
 }
@@ -80,10 +93,90 @@ body, html, #root {
   border: 1px solid rgba(255, 255, 255, 0.45);
   color: #ffffff;
   font-family: "Courier New", Courier, monospace;
+=======
+  overflow: hidden;
+}
+
+/* --- MAIN MENU STYLING --- */
+.main-menu-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 2rem;
+  z-index: 310;
+}
+
+.game-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  color: #ff3333;
+  letter-spacing: 6px;
+  margin-bottom: 3rem;
+  text-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+  text-transform: uppercase;
+}
+
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.menu-btn {
+  padding: 14px 32px;
+  background: rgba(20, 20, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e6;
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.menu-btn:hover {
+  background: rgba(255, 51, 51, 0.15);
+  border-color: #ff3333;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+  transform: translateY(-2px);
+}
+
+/* --- STORYLINE INTRO STYLING --- */
+.storyline-container {
+  max-width: 650px;
+  padding: 2.5rem;
+  text-align: left;
+}
+
+.storyline-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  letter-spacing: 1px;
+  color: #b0b0ba;
+  margin-bottom: 3rem;
+  white-space: pre-line; /* Essential if handling multi-line narrative strings */
+}
+
+.storyline-text strong {
+  color: #ffcc88;
+}
+
+.start-game-btn {
+  display: block;
+  margin-left: auto;
+  padding: 12px 28px;
+  background: transparent;
+  border: 1px solid #ffcc88;
+  color: #ffcc88;
+  font-family: inherit;
+>>>>>>> e3799e985c6dfb9904d60010298f082dcb404b1d
   font-size: 0.95rem;
   letter-spacing: 2px;
   text-transform: uppercase;
   cursor: pointer;
+<<<<<<< HEAD
   animation: cinematicFadeIn 1.8s ease forwards;
   animation-delay: 12.6s;
   transition: background 0.2s ease, border-color 0.2s ease;
@@ -1377,3 +1470,15 @@ body, html, #root {
 .overlay-content:has(.door-locked-ui) {
   width: min(480px, 92vw);
 }
+=======
+  transition: all 0.2s ease;
+}
+
+.start-game-btn:hover {
+  background: #ffcc88;
+  color: #050508;
+  box-shadow: 0 0 20px rgba(255, 204, 136, 0.4);
+}
+  }
+}
+>>>>>>> e3799e985c6dfb9904d60010298f082dcb404b1d
