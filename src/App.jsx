@@ -206,16 +206,6 @@ export default function App() {
     }
   };
 
-    const handleDoorClick = useCallback(() => {
-    if (inventory.includes('Keycard')) {
-      setStage(2);
-      setPlayerPos(new THREE.Vector3(0, -1, 15));
-      setCenterMessage('STAGE 2: THE HAUNTED LECTURE HALL');
-    } else {
-      handleObjectClick('door_locked');
-    }
-  }, [inventory, handleObjectClick, playerPos]);
-
   useEffect(() => () => clearSequenceErrorTimer(), []);
 
   useEffect(() => {
@@ -407,6 +397,15 @@ export default function App() {
     );
   }
 
+  // Keep the core stage-progression engine here
+  const handleStage1Escape = () => {
+    setTransitionState('toStage2');
+    setTimeout(() => {
+      setCurrentStage(2);
+      setTransitionState(null);
+    }, 4000);
+  };
+
   return (
     <div className="game-container">
       
@@ -447,18 +446,30 @@ export default function App() {
             <Player stage={currentStage} resetNonce={libraryResetNonce} onPositionUpdate={currentStage === 3 ? handlePlayerPositionUpdate : undefined} />
             <Flashlight isBlackout={isBlackout} />
 
+          {/* STAGE 1 */}
             {currentStage === 1 && (
-              <DormRoom inventory={inventory} onObjectClick={setActiveOverlay} onEscape={() => {
-                setTransitionState('toStage2');
-                setTimeout(() => {
-                  setCurrentStage(2);
-                  setTransitionState(null);
-                }, 4000);
-              }} />
-            )}
-            {currentStage === 2 && <LectureHall onObjectClick={setActiveOverlay} />}
+              <DormRoom 
+              inventory={inventory} 
+              onObjectClick={setActiveOverlay} 
+              onEscape={handleStage1Escape}
+              />
+      )}
+          {/* STAGE 2 */}
+            {currentStage === 2 && 
+            <LectureHall 
+            onObjectClick={setActiveOverlay
+            } />}
+
+            {/* STAGE 2 */}
             {currentStage === 3 && (
-              <MainLibrary key={libraryResetNonce} inventory={inventory} onObjectClick={setActiveOverlay} onCaught={handleStaffCaught} onEnemyPositionUpdate={handleEnemyPositionUpdate} isBlackout={isBlackout} onBookCollect={(title) => {
+              <MainLibrary 
+              key={libraryResetNonce} 
+              inventory={inventory} 
+              onObjectClick={setActiveOverlay} 
+              onCaught={handleStaffCaught} 
+              onEnemyPositionUpdate={handleEnemyPositionUpdate} 
+              isBlackout={isBlackout} 
+              onBookCollect={(title) => {
                 if (!inventory.includes(title)) setInventory([...inventory, title]);
               }} />
             )}
@@ -726,5 +737,4 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
+  );}

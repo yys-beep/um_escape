@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 
 // 🛏️ STAGE 1: Kolej Kediaman Ke-1 (Dorm Room) — fully decorated
-export default function DormRoom({ inventory, onObjectClick, handleDoorClick }) {
+export default function DormRoom({ inventory, onObjectClick, onEscape }) {
   const ceilingLightRef = useRef();
   const lightMaterialRef = useRef();
 
@@ -23,6 +23,16 @@ export default function DormRoom({ inventory, onObjectClick, handleDoorClick }) 
       lightMaterialRef.current.emissiveIntensity = intensity * 1.5;
     }
   });
+
+  const handleDoorClick = (e) => {
+    e.stopPropagation(); // Stops the click from hitting things behind the door
+    
+    if (inventory.includes('Keycard')) {
+      onEscape(); // Tell App.jsx we are leaving Stage 1
+    } else {
+      onObjectClick('door_locked'); // Trigger the overlay popup managed by App.jsx
+    }
+  };
 
   return (
     <group>
@@ -131,12 +141,6 @@ export default function DormRoom({ inventory, onObjectClick, handleDoorClick }) 
 {/* === DOOR (front wall, clickable) === */}
 <group 
   position={[0.2, -0.15, 4.85]} 
-  onClick={(e) => {
-    e.stopPropagation(); // 1. Stops the click from passing through the door
-    if (handleDoorClick) {
-      handleDoorClick(e); // 2. Calls the function passed down from App.jsx
-    }
-  }}
 >
   {/* Door panel */}
   <mesh>
