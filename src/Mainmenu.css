@@ -383,3 +383,28 @@ kbd {
 .progress-dot--active {
   background: rgba(255, 68, 68, 0.7);
 }
+
+/* ─── Storyline Skip Button ─────────────────────────────────────────────────── */
+.storyline-skip {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 10000;
+  
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: #888888;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.storyline-skip:hover {
+  color: #ffffff;
+  border-color: #ff4444; /* Flashes terminal red on hover */
+  background: rgba(255, 68, 68, 0.1);
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
