@@ -325,6 +325,28 @@ kbd {
   50%       { opacity: 1; }
 }
 
+/* --- Character Portrait  --- */
+
+.storyline-portrait {
+  position: absolute;
+  /* Centers the character layout horizontally across the screen */
+  left: 50%;
+  transform: translateX(-50%);
+  /* Places the portrait right above the text box structure */
+  bottom: calc(5vh + 120px + 20px); 
+  height: 280px;
+  width: auto;
+  z-index: 1;
+  pointer-events: none; /* Allows click-through logic to function seamlessly */
+}
+
+.storyline-portrait img {
+  height: 100%;
+  width: auto;
+  object-fit: contain; /* Prevents the image aspect ratio from distorting */
+  display: block;
+}
+
 /* ─── Typewriter ────────────────────────────────────────────────────────────── */
 .typewriter-text {
   white-space: pre-wrap;

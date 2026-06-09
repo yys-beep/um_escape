@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './MainMenu.css';
 
+import friendNeutral from '/src/assets/10.png';   
+import friendShocked from '/src/assets/7.png';    
+import friendDoubtful from '/src/assets/9.png';  
+
 // ─── Storyline Dialogues ───────────────────────────────────────────────────────
 const STORY_DIALOGUES = [
   {
@@ -10,6 +14,7 @@ const STORY_DIALOGUES = [
   },
   {
     speaker: "Friend",
+    portraitImg: friendNeutral,
     text: "...You heard the rumors going around lately? They're saying people from Kolej Kediaman keep hearing whispers outside their rooms at night.",
   },
   {
@@ -18,6 +23,7 @@ const STORY_DIALOGUES = [
   },
   {
     speaker: "Friend",
+    portraitImg: friendDoubtful,
     text: "That's what everyone thought at first. But last week, my friend stayed late at DK1 doing revisions. And he swore the projector turned on by itself!",
   },
   {
@@ -26,6 +32,7 @@ const STORY_DIALOGUES = [
   },
   {
     speaker: "Friend",
+    portraitImg: friendShocked,
     text: "No one was inside the hall... He even said the projector kept flashing random student names!!",
   },
   {
@@ -34,6 +41,7 @@ const STORY_DIALOGUES = [
   },
   {
     speaker: "Friend",
+    portraitImg: friendShocked,
     text: "It gets worse. They're saying that library staff have been complaining too. Books showing up in the wrong sections. Impossible places. Medical journals inside engineering shelves. Old archived books appearing on tables that were locked the night before.",
   },
   {
@@ -42,6 +50,7 @@ const STORY_DIALOGUES = [
   },
   {
     speaker: "Friend",
+    portraitImg: friendDoubtful,
     text: "You joke now, but students have been talking about someone missing. They say a student disappeared years ago around campus. The weird part is...",
     whisper: "...she never actually left campus.",
   },
@@ -198,9 +207,27 @@ function StorylineScreen({ onComplete }) {
     }
   };
 
+  const showPortrait = current && current.speaker === 'Friend';
+
   return (
     <div className="storyline-screen" onClick={ready ? advance : undefined}>
       <div className="storyline-bg" />
+
+      {/* Skip button — top right */}
+      <button
+        className="storyline-skip"
+        onClick={(e) => { e.stopPropagation(); onComplete(); }}
+      >
+        SKIP ▶▶
+      </button>
+
+      {/* Character portrait — bottom right of box area */}
+      {showPortrait && (
+        <div className="storyline-portrait">
+          {/* This directly injects the safely imported picture variable */}
+        <img src={current.portraitImg} alt={current.speaker} />
+        </div>
+      )}
 
       <div className="storyline-box">
         {current.isNarration ? (
