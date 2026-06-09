@@ -1,0 +1,363 @@
+/* ─── Shared ───────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/* ─── Logo Screen ───────────────────────────────────────────────────────────── */
+.logo-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  animation: logoFadeIn 0.8s ease forwards, logoFadeOut 0.8s ease 2.4s forwards;
+  z-index: 9999;
+}
+
+@keyframes logoFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes logoFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.logo-title {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(3rem, 8vw, 6rem);
+  color: #ffffff;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 40px rgba(255,255,255,0.3);
+}
+
+.logo-subtitle {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  color: #888;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.logo-line {
+  width: 120px;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+  margin: 0.4rem 0;
+}
+
+.logo-university {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #555;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* ─── Main Menu ─────────────────────────────────────────────────────────────── */
+.main-menu {
+  position: fixed;
+  inset: 0;
+  background: #080810;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  animation: menuFadeIn 0.6s ease forwards;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.menu-glitch-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.015) 2px,
+      rgba(255,255,255,0.015) 4px
+    );
+  pointer-events: none;
+  animation: scanlines 8s linear infinite;
+}
+
+@keyframes scanlines {
+  from { background-position: 0 0; }
+  to   { background-position: 0 100px; }
+}
+
+.menu-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.menu-title {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 30px rgba(255, 80, 80, 0.4);
+}
+
+.menu-title-accent {
+  color: #ff4444;
+}
+
+.menu-tagline {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+  color: #666;
+  letter-spacing: 0.15em;
+  margin: 0 0 1.5rem 0;
+  font-style: italic;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: 260px;
+}
+
+.menu-btn {
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #cccccc;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.05);
+  text-shadow: 0 0 12px rgba(255,255,255,0.5);
+}
+
+.menu-btn--primary {
+  border-color: rgba(255, 68, 68, 0.5);
+  color: #ff8888;
+}
+
+.menu-btn--primary:hover {
+  border-color: #ff4444;
+  color: #ffffff;
+  background: rgba(255, 68, 68, 0.12);
+  text-shadow: 0 0 12px rgba(255,68,68,0.7);
+}
+
+/* ─── Instructions ──────────────────────────────────────────────────────────── */
+.instructions-content {
+  max-width: 700px;
+  width: 90vw;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.instr-block {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 1rem;
+  text-align: left;
+}
+
+.instr-block h3 {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ff6666;
+  margin: 0 0 0.75rem 0;
+}
+
+.instr-block p {
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  color: #aaa;
+  margin: 0.3rem 0;
+}
+
+kbd {
+  display: inline-block;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.78rem;
+  color: #ddd;
+  margin-right: 4px;
+}
+
+/* ─── Storyline ─────────────────────────────────────────────────────────────── */
+.storyline-screen {
+  position: fixed;
+  inset: 0;
+  background: #050508;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 5vh;
+  z-index: 9000;
+  cursor: pointer;
+  animation: menuFadeIn 1s ease forwards;
+}
+
+.storyline-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(40, 10, 10, 0.6) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px);
+  pointer-events: none;
+}
+
+.storyline-box {
+  position: relative;
+  z-index: 1;
+  width: min(680px, 92vw);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-top: 2px solid rgba(255, 68, 68, 0.5);
+  padding: 1.4rem 1.8rem 1rem;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.storyline-speaker {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ff6666;
+  margin-bottom: 0.2rem;
+}
+
+.storyline-speaker--player {
+  color: #66aaff;
+}
+
+.storyline-speaker--email {
+  color: #ffaa44;
+}
+
+.storyline-dialogue {
+  font-family: 'Courier New', monospace;
+  font-size: 0.97rem;
+  color: #ddd;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.storyline-email {
+  font-family: 'Courier New', monospace;
+  font-size: 0.88rem;
+  color: #ffcc88;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  border-left: 2px solid rgba(255,170,68,0.4);
+  padding-left: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.storyline-narration {
+  font-family: 'Courier New', monospace;
+  font-size: 0.92rem;
+  color: #888;
+  font-style: italic;
+  line-height: 1.65;
+  text-align: center;
+  padding: 0.3rem 0;
+}
+
+.storyline-narration--whisper {
+  color: #bb4444;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 20px rgba(180, 50, 50, 0.5);
+}
+
+.storyline-whisper {
+  color: #cc3333;
+  font-style: italic;
+}
+
+.storyline-continue {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: #555;
+  letter-spacing: 0.15em;
+  text-align: right;
+  margin-top: 0.6rem;
+  animation: blinkContinue 1.2s ease infinite;
+}
+
+@keyframes blinkContinue {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+/* ─── Typewriter ────────────────────────────────────────────────────────────── */
+.typewriter-text {
+  white-space: pre-wrap;
+}
+
+.typewriter-cursor {
+  animation: cursorBlink 0.7s step-end infinite;
+  color: #ff6666;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ─── Progress dots ─────────────────────────────────────────────────────────── */
+.storyline-progress {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 5px;
+  z-index: 2;
+}
+
+.progress-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  transition: background 0.3s;
+}
+
+.progress-dot--active {
+  background: rgba(255, 68, 68, 0.7);
+}
