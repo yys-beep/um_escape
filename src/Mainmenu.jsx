@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './MainMenu.css';
+import './Mainmenu.css';
 
 import friendNeutral from '/src/assets/10.png';   
 import friendShocked from '/src/assets/7.png';    
