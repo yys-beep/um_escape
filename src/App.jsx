@@ -6,7 +6,8 @@ import './App.css';
 
 // ─── Stage imports ────────────────────────────────────────────────────────────
 import DormRoom from './Stage1';
-import { LectureHall, PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, EndingCinematic } from './Stage2';
+import { LectureHall, PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, EndingCinematic } 
+from './Stage2';
 import {
   MainLibrary,
   LIBRARY_BOOKSHELVES,
@@ -385,9 +386,16 @@ export default function App() {
 
   const closeOverlay = () => {
     setActiveOverlay(null);
-    if (activeOverlay === 'projector') resetProjectorPuzzle();
-    if (activeOverlay === 'archive_keypad') setArchiveCodeInput('');
+    if (activeOverlay === 'projector') 
+      resetProjectorPuzzle();
+    if (activeOverlay === 'archive_keypad') 
+      setArchiveCodeInput('');
   };
+
+  if (gamePhase === 'menu') {
+    return <MainMenuController onStartGame={() => s
+      etGamePhase('game')} />;
+  }
 
   if (isGameBeaten) {
     return (
@@ -488,7 +496,7 @@ export default function App() {
       <div className="hud-layer">
         <h2>
           {currentStage === 1 && 'Kolej Kediaman Ke-1'}
-          {currentStage === 2 && 'Dewan Kuliah (Abandoned)'}
+          {currentStage === 2 && 'Dewan Kuliah'}
           {currentStage === 3 && 'Perpustakaan Utama'}
         </h2>
         
@@ -509,9 +517,6 @@ export default function App() {
             )}
           </div>
         </div>
-        
-        <p className="hint-text">Click screen to lock mouse. Press ESC to unlock.</p>
-        <p className="hint-text">WASD to walk. Click objects to inspect.</p>
 
         {currentStage === 3 && (
           <div className="minimap-container" aria-label="Library survival radar">
@@ -587,8 +592,8 @@ export default function App() {
                     <p className="locker-unlocked-text">✓ CLICK</p>
                     <p>The locker swings open. Inside:</p>
                     <ul className="locker-contents">
-                      <li>📷 A photograph — a girl in front of the Main Library</li>
-                      <li>🪪 Maya Rahman — Student ID Card</li>
+                      <li>📷 A photograph : a girl in front of the Main Library</li>
+                      <li>🪪 Maya Rahman : Student ID Card</li>
                       <li>💳 <strong style={{color:'#44ff88'}}>Campus Keycard — added to inventory</strong></li>
                     </ul>
                     <p className="locker-note">"Her name is on the card. M. Rahman. CS Year 2."</p>
@@ -614,7 +619,7 @@ export default function App() {
                       <tr>
                         <th>08:00</th>
                         <td>MPU3123</td>
-                        <td className="clue-slot"><span className="clue-digit">3</span>QTK1013</td>
+                        <td className="clue-slot"><span className="clue-digit">3</span>WIA2005</td>
                         <td>—</td>
                         <td>WIA1001</td>
                         <td>—</td>
