@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import './App.css';
-import MainMenuController from './MainMenu';
+import MainMenuController from './Mainmenu';
 
 // ─── Stage imports ────────────────────────────────────────────────────────────
 import DormRoom from './Stage1';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './MainMenu.css';
+import './Mainmenu.css';
 
 // ─── Storyline Dialogues ───────────────────────────────────────────────────────
 const STORY_DIALOGUES = [
