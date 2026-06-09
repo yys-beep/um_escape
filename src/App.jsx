@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import './App.css';
+import MainMenuController from './MainMenu';
 
 // ─── Stage imports ────────────────────────────────────────────────────────────
 import DormRoom from './Stage1';
@@ -208,6 +209,7 @@ export function Flashlight({ isBlackout }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
+  const [gamePhase, setGamePhase] = useState('menu'); // 'menu' | 'game'
   const [currentStage, setCurrentStage] = useState(1);
   const [activeOverlay, setActiveOverlay] = useState(null);
   const [inventory, setInventory] = useState([]);
@@ -301,6 +303,7 @@ export default function App() {
   };
 
   const handlePlayAgain = () => {
+    setGamePhase('menu');
     setCurrentStage(1);
     setActiveOverlay(null);
     setInventory([]);
@@ -421,6 +424,10 @@ export default function App() {
     if (activeOverlay === 'projector') resetProjectorPuzzle();
     if (activeOverlay === 'archive_keypad') setArchiveCodeInput('');
   };
+
+  if (gamePhase === 'menu') {
+    return <MainMenuController onStartGame={() => setGamePhase('game')} />;
+  }
 
   if (isGameBeaten) {
     return (
@@ -543,9 +550,6 @@ export default function App() {
           </div>
         </div>
         
-        <p className="hint-text">Click screen to lock mouse. Press ESC to unlock.</p>
-        <p className="hint-text">WASD to walk. Click objects to inspect.</p>
-
         {currentStage === 3 && (
           <div className="minimap-container" aria-label="Library survival radar">
             {LIBRARY_BOOKSHELVES.map((shelf) => (
