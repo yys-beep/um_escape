@@ -7,14 +7,16 @@ import './App.css';
 // ─── Stage imports ────────────────────────────────────────────────────────────
 import DormRoom from './Stage1';
 import { LectureHall, PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, EndingCinematic } from './Stage2';
+import { MainLibrary } from './Stage3';
+
+// ─── Data imports (This fixes the Fast Refresh error!) ────────────────────────
 import {
-  MainLibrary,
   LIBRARY_BOOKSHELVES,
   LIBRARY_HIDDEN_BOOKS,
   LIBRARY_ARCHIVE_CODE,
   normalizeLibraryPosition,
   getBookshelfMinimapStyle,
-} from './Stage3';
+} from './libraryData';
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 const WALK_SPEED = 4.5;
@@ -64,7 +66,7 @@ function usePlayerControls() {
   return keys;
 }
 
-// ─── Player ───────────────────────────────────────────────────────────────────
+/// ─── Player (Now with Collision Detection) ────────────────────────────────────
 function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
   const { camera } = useThree();
   const keys = usePlayerControls();
@@ -100,12 +102,43 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
     right.crossVectors(direction, up).normalize();
 
     const move = WALK_SPEED * delta;
+    
+    // Calculate where the player WANTS to move
+    const nextPosition = camera.position.clone();
+    if (keys.current.forward) nextPosition.addScaledVector(direction, move);
+    if (keys.current.backward) nextPosition.addScaledVector(direction, -move);
+    if (keys.current.left) nextPosition.addScaledVector(right, -move);
+    if (keys.current.right) nextPosition.addScaledVector(right, move);
 
-    if (keys.current.forward) camera.position.addScaledVector(direction, move);
-    if (keys.current.backward) camera.position.addScaledVector(direction, -move);
-    if (keys.current.left) camera.position.addScaledVector(right, -move);
-    if (keys.current.right) camera.position.addScaledVector(right, move);
+    // --- COLLISION DETECTION ---
+    let canMoveX = true;
+    let canMoveZ = true;
+    const playerRadius = 0.6; // Acts as a bumper around the camera
 
+    if (stage === 3) {
+      for (const shelf of LIBRARY_BOOKSHELVES) {
+        // Calculate the boundaries of the current bookshelf
+        const minX = shelf.x - 1 - playerRadius;
+        const maxX = shelf.x + 1 + playerRadius;
+        const minZ = shelf.z - 5 - playerRadius;
+        const maxZ = shelf.z + 5 - playerRadius;
+
+        // If stepping horizontally puts us inside a shelf, block X movement
+        if (nextPosition.x > minX && nextPosition.x < maxX && camera.position.z > minZ && camera.position.z < maxZ) {
+          canMoveX = false;
+        }
+        // If stepping vertically puts us inside a shelf, block Z movement
+        if (camera.position.x > minX && camera.position.x < maxX && nextPosition.z > minZ && nextPosition.z < maxZ) {
+          canMoveZ = false;
+        }
+      }
+    }
+
+    // Apply movement only if the path is clear
+    if (canMoveX) camera.position.x = nextPosition.x;
+    if (canMoveZ) camera.position.z = nextPosition.z;
+
+    // Apply outer room boundaries
     if (stage === 1) {
       camera.position.x = THREE.MathUtils.clamp(camera.position.x, -DORM_BOUNDS, DORM_BOUNDS);
       camera.position.z = THREE.MathUtils.clamp(camera.position.z, -DORM_BOUNDS, DORM_BOUNDS);
@@ -118,14 +151,13 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
     }
     camera.position.y = 0;
 
+    // Update Minimap
     if (stage === 3 && onPositionUpdate) {
       const now = performance.now();
       if (now - positionThrottleRef.current < 100) return;
-
       const { x, z } = camera.position;
       const dx = Math.abs(x - lastReportedRef.current.x);
       const dz = Math.abs(z - lastReportedRef.current.z);
-
       if (dx > 0.08 || dz > 0.08) {
         positionThrottleRef.current = now;
         lastReportedRef.current = { x, z };
@@ -138,7 +170,7 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
 }
 
 // ─── Flashlight ───────────────────────────────────────────────────────────────
-function Flashlight({ isBlackout }) {
+export function Flashlight({ isBlackout }) {
   const lightRigRef = useRef(null);
   const spotRef = useRef(null);
   const { camera, scene } = useThree();
@@ -161,14 +193,15 @@ function Flashlight({ isBlackout }) {
     <group ref={lightRigRef}>
       <spotLight
         ref={spotRef}
-        color="#f8f8ff"
-        intensity={isBlackout ? 0 : 500}
-        angle={Math.PI / 8}
-        penumbra={0.4}
-        distance={150}
-        decay={2}
+        color="#fafff0"
+        intensity={isBlackout ? 0 : 800} // Much brighter core
+        angle={Math.PI / 6} // Wider beam
+        penumbra={0.5}
+        distance={400} // Increased distance to hit far walls!
+        decay={1.2} // Lower decay so light travels further
       />
-      <pointLight intensity={isBlackout ? 0 : 30} distance={5} color="#ffffff" />
+      {/* Increased ambient glow around the player so you are never in pitch black */}
+      <pointLight intensity={isBlackout ? 0 : 60} distance={15} color="#ffffff" decay={1.5} />
     </group>
   );
 }
@@ -460,7 +493,7 @@ export default function App() {
             onObjectClick={setActiveOverlay
             } />}
 
-            {/* STAGE 2 */}
+            {/* STAGE 3 */}
             {currentStage === 3 && (
               <MainLibrary 
               key={libraryResetNonce} 
@@ -737,4 +770,5 @@ export default function App() {
         </div>
       )}
     </div>
-  );}
+  );
+}

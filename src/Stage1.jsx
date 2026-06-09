@@ -139,8 +139,9 @@ export default function DormRoom({ inventory, onObjectClick, onEscape }) {
 
 
 {/* === DOOR (front wall, clickable) === */}
-<group 
-  position={[0.2, -0.15, 4.85]} 
+<group
+  position={[0.2, -0.15, 4.85]}
+  onClick={(e) => { e.stopPropagation(); handleDoorClick(e); }}
 >
   {/* Door panel */}
   <mesh>

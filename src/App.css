@@ -1377,3 +1377,93 @@ body, html, #root {
 .overlay-content:has(.door-locked-ui) {
   width: min(480px, 92vw);
 }
+
+/* ------------------------------------------- */
+/* Enhanced Bookshelf Inventory UI             */
+/* ------------------------------------------- */
+.inventory-box {
+  background: #2b1d14; /* Dark mahogany wood base */
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.4) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.2) 2px, transparent 2px),
+    linear-gradient(to bottom, #4a2c1b 0%, #2b1d14 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
+  border: 4px solid #1c110a;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: inset 0 0 25px rgba(0,0,0,0.9), 0 8px 20px rgba(0,0,0,0.6);
+  min-width: 240px;
+}
+
+.inventory-box p {
+  color: #d4c4b7;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: bold;
+  border-bottom: 3px solid #1c110a;
+  padding-bottom: 8px;
+  margin-top: 0;
+  text-shadow: 1px 1px 2px #000;
+}
+
+/* Make inventory items look like physical book spines */
+.item-tag {
+  background: linear-gradient(to right, #4a1515, #8b2222) !important;
+  border-left: 5px solid #e8d8c8 !important; /* Paper edge illusion */
+  border-right: 2px solid #2a0808 !important;
+  border-radius: 1px 6px 6px 1px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 8px !important;
+  box-shadow: 2px 4px 8px rgba(0,0,0,0.6) !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.9) !important;
+  font-weight: bold !important;
+  letter-spacing: 1.5px !important;
+  font-size: 0.9rem !important;
+  transition: transform 0.2s ease, filter 0.2s ease !important;
+  position: relative;
+  display: block;
+}
+
+/* Adds a spine crease detail to the book */
+.item-tag::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: 8px;
+  width: 1px;
+  background: rgba(0,0,0,0.3);
+}
+
+.item-tag:hover {
+  transform: translateX(8px) scale(1.02);
+  filter: brightness(1.2);
+}
+
+/* Enhanced Minimap */
+.minimap-container {
+  border: 2px solid rgba(51, 255, 102, 0.6);
+  box-shadow: 0 0 15px rgba(0, 255, 80, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.8);
+  background-color: rgba(6, 6, 10, 0.85);
+}
+
+/* Projector Interface */
+.terminal-screen {
+  background: #020402 !important;
+  border: 4px solid #333 !important;
+  box-shadow: 0 0 50px rgba(0, 255, 80, 0.1) !important;
+  background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)) !important;
+  background-size: 100% 4px, 3px 100% !important;
+}
+
+.terminal-file {
+  background: rgba(20, 40, 20, 0.8) !important;
+  border: 1px solid #1a5c1a !important;
+  color: #aaffaa !important;
+}
+
+.terminal-file:hover {
+  background: rgba(40, 80, 40, 0.9) !important;
+  border-color: #33ff66 !important;
+}
