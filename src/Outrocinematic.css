@@ -1,0 +1,333 @@
+/* ─── Base screen ────────────────────────────────────────────────────────────── */
+.outro-screen {
+  position: fixed;
+  inset: 0;
+  background: #06060f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 5vh;
+  cursor: pointer;
+  z-index: 9999;
+  animation: outroFadeIn 1.2s ease forwards;
+  overflow: hidden;
+}
+
+.outro-screen--pure-black {
+  background: #000;
+  cursor: default;
+  animation: none;
+}
+
+@keyframes outroFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Vignette + scanlines ───────────────────────────────────────────────────── */
+.outro-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.82) 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.014) 3px,
+      rgba(255,255,255,0.014) 4px
+    );
+}
+
+/* ─── Curtain wind effect ────────────────────────────────────────────────────── */
+.outro-curtain-wind {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  width: 18%;
+  height: 70%;
+  background: linear-gradient(180deg, rgba(200,210,240,0.07) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+  transform-origin: top center;
+  animation: curtainBlow 2.4s ease-in-out infinite alternate;
+}
+
+.outro-curtain-wind::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 60%;
+  width: 14%;
+  height: 65%;
+  background: linear-gradient(180deg, rgba(200,210,240,0.05) 0%, transparent 100%);
+  transform-origin: top center;
+  animation: curtainBlow 3.1s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes curtainBlow {
+  from { transform: skewX(-3deg) scaleX(1);   opacity: 0.6; }
+  to   { transform: skewX(8deg)  scaleX(1.05); opacity: 1; }
+}
+
+/* ─── Background silhouette — always present, dark shadow of a girl ─────────── */
+.outro-silhouette {
+  position: absolute;
+  /* Centered horizontally, sits above the dialogue box */
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: clamp(180px, 22vw, 300px);
+  height: 75%;
+  z-index: 2;
+  pointer-events: none;
+
+  /* Dark womanly silhouette shape using a radial gradient mask */
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 220'%3E%3Cellipse cx='50' cy='22' rx='18' ry='20'/%3E%3Cpath d='M15 50 Q20 44 50 44 Q80 44 85 50 L92 220 H8 Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 220'%3E%3Cellipse cx='50' cy='22' rx='18' ry='20'/%3E%3Cpath d='M15 50 Q20 44 50 44 Q80 44 85 50 L92 220 H8 Z'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: top center;
+  mask-position: top center;
+
+  /* Subtle breathing animation */
+  animation: silhouettePulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes silhouettePulse {
+  from { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  to   { opacity: 0.75; transform: translateX(-50%) scale(1.012); }
+}
+
+/* ─── Maya portrait — centered above box, only on "Thank you" scene ──────────── */
+.outro-maya-portrait {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Sits right above the dialogue box, same vibe as the friend portrait */
+  bottom: calc(5vh + 110px + 16px);
+  height: 280px;
+  width: auto;
+  z-index: 4;
+  pointer-events: none;
+  animation: mayaAppear 1.2s ease forwards;
+  filter: brightness(0.92) saturate(0.75);
+}
+
+.outro-maya-img {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  animation: mayaFloat 5s ease-in-out infinite alternate;
+}
+
+@keyframes mayaAppear {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes mayaFloat {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(-8px); }
+}
+
+
+/* ─── News overlay ───────────────────────────────────────────────────────────── */
+.outro-news-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.outro-news-ticker {
+  background: #c41c00;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 5px 0;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  animation: tickerScroll 22s linear infinite;
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(100vw); }
+  100% { transform: translateX(-200%); }
+}
+
+.outro-news-headline {
+  background: rgba(0,0,0,0.88);
+  color: #ffd600;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.82rem, 1.8vw, 1rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 18px;
+  border-bottom: 1px solid rgba(255,214,0,0.25);
+}
+
+/* ─── Dialogue / narration box ───────────────────────────────────────────────── */
+.outro-box {
+  position: relative;
+  z-index: 5;
+  width: min(680px, 92vw);
+  background: rgba(0,0,0,0.86);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-top: 2px solid rgba(100,120,200,0.45);
+  padding: 1.4rem 1.8rem 1rem;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.outro-label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.outro-label--player  { color: #6699ff; }
+.outro-label--whisper { color: #8899cc; font-style: italic; }
+
+.outro-text {
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  color: #ccc;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.outro-text--narration {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+}
+
+.outro-text--whisper {
+  color: #8899cc;
+  font-size: 1.05rem;
+  font-style: italic;
+  text-align: center;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 24px rgba(100,130,210,0.45);
+}
+
+.outro-text--news {
+  font-size: 0.88rem;
+  color: #ddd;
+}
+
+/* ─── Typewriter ─────────────────────────────────────────────────────────────── */
+.outro-typewriter { white-space: pre-wrap; }
+
+.outro-cursor {
+  color: #8899cc;
+  animation: outroCursor 0.7s step-end infinite;
+}
+
+@keyframes outroCursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.outro-continue {
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  color: #444;
+  letter-spacing: 0.15em;
+  text-align: right;
+  margin-top: 0.5rem;
+  animation: continuePulse 1.4s ease infinite;
+}
+
+@keyframes continuePulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.9; }
+}
+
+/* ─── THE END screen ─────────────────────────────────────────────────────────── */
+.outro-end-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 9999;
+}
+
+.outro-theend {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(3rem, 10vw, 7rem);
+  color: #fff;
+  letter-spacing: 0.35em;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.96);
+  transition: none;
+  text-shadow: 0 0 80px rgba(255,255,255,0.12);
+}
+
+.outro-theend--visible {
+  animation: endReveal 3s ease forwards;
+}
+
+@keyframes endReveal {
+  0%   { opacity: 0; transform: scale(0.96); }
+  25%  { opacity: 0; }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.outro-endlogo {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(0.65rem, 1.4vw, 0.85rem);
+  color: #444;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  opacity: 0;
+}
+
+.outro-endlogo--visible {
+  animation: endReveal 5s ease forwards;
+}
+
+.outro-again-btn {
+  margin-top: 2.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #666;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 0.6rem 2rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.outro-again-btn--visible {
+  animation: endReveal 6.5s ease forwards;
+}
+
+.outro-again-btn:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,0.55);
+}

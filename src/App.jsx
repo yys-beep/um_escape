@@ -9,6 +9,7 @@ import MainMenuController from './Mainmenu';
 import DormRoom from './Stage1';
 import { LectureHall, PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, EndingCinematic } from './Stage2';
 import { MainLibrary } from './Stage3';
+import OutroCinematic from './Outrocinematic';
 
 // ─── Data imports (This fixes the Fast Refresh error!) ────────────────────────
 import {
@@ -67,7 +68,7 @@ function usePlayerControls() {
   return keys;
 }
 
-/// ─── Player (Now with Collision Detection) ────────────────────────────────────
+/// ─── Player ────────────────────────────────────
 function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
   const { camera } = useThree();
   const keys = usePlayerControls();
@@ -430,11 +431,7 @@ export default function App() {
   }
 
   if (isGameBeaten) {
-    return (
-      <div className="game-container game-container--ending">
-        <EndingCinematic onPlayAgain={handlePlayAgain} />
-      </div>
-    );
+    return <OutroCinematic onPlayAgain={handlePlayAgain} />;
   }
 
   // Keep the core stage-progression engine here
@@ -650,27 +647,27 @@ export default function App() {
                     <tbody>
                       <tr>
                         <th>08:00</th>
-                        <td>MPU3123</td>
-                        <td className="clue-slot"><span className="clue-digit">3</span>QTK1013</td>
+                        <td>GIG1003</td>
+                        <td className="clue-slot"><span className="clue-digit">3</span>WIA2004</td>
                         <td>—</td>
                         <td>WIA1001</td>
                         <td>—</td>
                       </tr>
                       <tr>
                         <th>10:00</th>
-                        <td>SECJ2013</td>
+                        <td>WIG2005</td>
                         <td>—</td>
                         <td className="clue-slot"><span className="clue-digit">1</span>WIX2002</td>
-                        <td>SECJ2013</td>
+                        <td>WIA2004</td>
                         <td>—</td>
                       </tr>
                       <tr>
                         <th>14:00</th>
-                        <td>Lab</td>
+                        <td>TEST</td>
                         <td>—</td>
-                        <td>Tutorial</td>
+                        <td>TEST II</td>
                         <td>—</td>
-                        <td className="clue-slot"><span className="clue-digit">3</span>Consultation</td>
+                        <td className="clue-slot"><span className="clue-digit">3</span>LAB</td>
                       </tr>
                     </tbody>
                   </table>
