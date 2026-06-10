@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useReducer } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
@@ -7,7 +7,7 @@ import MainMenuController from './Mainmenu';
 
 // ─── Stage imports ────────────────────────────────────────────────────────────
 import DormRoom from './Stage1';
-import { LectureHall, PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, EndingCinematic } from './Stage2';
+import { LectureHall, ProjectorPuzzleOverlay, EndingCinematic } from './Stage2';
 import { MainLibrary } from './Stage3';
 import OutroCinematic from './Outrocinematic';
 
@@ -20,6 +20,9 @@ import {
   getBookshelfMinimapStyle,
 } from './libraryData';
 
+// Import from your new constants file!
+import { PROJECTOR_FILES, PROJECTOR_CORRECT_ORDER, INITIAL_PUZZLE_STATE, lectureHallReducer } from './Stage2.constants';
+
 // ─── Shared constants ─────────────────────────────────────────────────────────
 const WALK_SPEED = 4.5;
 const DORM_BOUNDS = 4.5;
@@ -28,6 +31,13 @@ const LIBRARY_BOUNDS_X = 9;
 const LIBRARY_BOUNDS_Z = 26;
 
 const STAFF_PATROL_X = 3.5;
+
+// ─── Global SFX Helper ────────────────────────────────────────────────────────
+const playSFX = (fileName, volume = 1.0) => {
+  const audio = new Audio(`/${fileName}`);
+  audio.volume = volume;
+  audio.play().catch((e) => console.log('Audio blocked by browser:', e));
+};
 
 // ─── Player Controls Hook ─────────────────────────────────────────────────────
 function usePlayerControls() {
@@ -68,9 +78,9 @@ function usePlayerControls() {
   return keys;
 }
 
-/// ─── Player ────────────────────────────────────
+/// ─── Player (Collision & Stair Climbing Math Fixed) ───────────────────────────
 function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
-  const { camera } = useThree();
+  const { camera: hookCamera } = useThree(); 
   const keys = usePlayerControls();
   const direction = useMemo(() => new THREE.Vector3(), []);
   const right = useMemo(() => new THREE.Vector3(), []);
@@ -80,33 +90,29 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
 
   useEffect(() => {
     if (stage === 2) {
-      camera.position.set(0, 0, 12);
+      hookCamera.position.set(0, 0, 12);
     } else if (stage === 3) {
-      camera.position.set(0, 0, 14);
+      hookCamera.position.set(0, 0, 14);
       lastReportedRef.current = { x: 0, z: 14 };
       positionThrottleRef.current = 0;
       onPositionUpdate?.(0, 14);
     } else {
-      camera.position.set(0, 0, 0);
+      hookCamera.position.set(0, 0, 0);
     }
-  }, [stage, camera, onPositionUpdate, resetNonce]);
+  }, [stage, hookCamera, onPositionUpdate, resetNonce]);
 
-  useFrame((_, delta) => {
-    camera.getWorldDirection(direction);
+  useFrame(({ camera: frameCamera }, delta) => {
+    frameCamera.getWorldDirection(direction);
     direction.y = 0;
 
-    if (direction.lengthSq() > 0.0001) {
-      direction.normalize();
-    } else {
-      direction.set(0, 0, -1);
-    }
+    if (direction.lengthSq() > 0.0001) direction.normalize();
+    else direction.set(0, 0, -1);
 
     right.crossVectors(direction, up).normalize();
-
     const move = WALK_SPEED * delta;
     
     // Calculate where the player WANTS to move
-    const nextPosition = camera.position.clone();
+    const nextPosition = frameCamera.position.clone();
     if (keys.current.forward) nextPosition.addScaledVector(direction, move);
     if (keys.current.backward) nextPosition.addScaledVector(direction, -move);
     if (keys.current.left) nextPosition.addScaledVector(right, -move);
@@ -115,49 +121,67 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
     // --- COLLISION DETECTION ---
     let canMoveX = true;
     let canMoveZ = true;
-    const playerRadius = 0.6; // Acts as a bumper around the camera
+    const playerRadius = 0.3; // FIX: Made the player "thinner" to squeeze through gaps
 
-    if (stage === 3) {
-      for (const shelf of LIBRARY_BOOKSHELVES) {
-        // Calculate the boundaries of the current bookshelf
-        const minX = shelf.x - 1 - playerRadius;
-        const maxX = shelf.x + 1 + playerRadius;
-        const minZ = shelf.z - 5 - playerRadius;
-        const maxZ = shelf.z + 5 - playerRadius;
-
-        // If stepping horizontally puts us inside a shelf, block X movement
-        if (nextPosition.x > minX && nextPosition.x < maxX && camera.position.z > minZ && camera.position.z < maxZ) {
-          canMoveX = false;
-        }
-        // If stepping vertically puts us inside a shelf, block Z movement
-        if (camera.position.x > minX && camera.position.x < maxX && nextPosition.z > minZ && nextPosition.z < maxZ) {
-          canMoveZ = false;
-        }
+    // STAGE 2 Collision
+    if (stage === 2) {
+      if (nextPosition.z < -12.0 && nextPosition.z > -14.5 && nextPosition.x > -2.5 && nextPosition.x < 2.5) {
+        canMoveZ = false;
+        canMoveX = false;
       }
     }
 
-    // Apply movement only if the path is clear
-    if (canMoveX) camera.position.x = nextPosition.x;
-    if (canMoveZ) camera.position.z = nextPosition.z;
+    // STAGE 3 Collision
+    if (stage === 3) {
+      for (const shelf of LIBRARY_BOOKSHELVES) {
+        // FIX: Tightened the shelf hitboxes to perfectly match the 3D models (1.4 width, 9.8 depth)
+        const minX = shelf.x - 0.75 - playerRadius;
+        const maxX = shelf.x + 0.75 + playerRadius;
+        const minZ = shelf.z - 4.9 - playerRadius;
+        const maxZ = shelf.z + 4.9 + playerRadius;
 
-    // Apply outer room boundaries
-    if (stage === 1) {
-      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -DORM_BOUNDS, DORM_BOUNDS);
-      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -DORM_BOUNDS, DORM_BOUNDS);
-    } else if (stage === 2) {
-      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -LECTURE_BOUNDS, LECTURE_BOUNDS);
-      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -LECTURE_BOUNDS, LECTURE_BOUNDS);
-    } else {
-      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -LIBRARY_BOUNDS_X, LIBRARY_BOUNDS_X);
-      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -LIBRARY_BOUNDS_Z, LIBRARY_BOUNDS_Z);
+        if (nextPosition.x > minX && nextPosition.x < maxX && frameCamera.position.z > minZ && frameCamera.position.z < maxZ) canMoveX = false;
+        if (frameCamera.position.x > minX && frameCamera.position.x < maxX && nextPosition.z > minZ && nextPosition.z < maxZ) canMoveZ = false;
+      }
     }
-    camera.position.y = 0;
+
+    // Apply movement
+    if (canMoveX) frameCamera.position.x = nextPosition.x;
+    if (canMoveZ) frameCamera.position.z = nextPosition.z;
+
+    // Apply Room Boundaries
+    if (stage === 1) {
+      frameCamera.position.x = THREE.MathUtils.clamp(frameCamera.position.x, -DORM_BOUNDS, DORM_BOUNDS);
+      frameCamera.position.z = THREE.MathUtils.clamp(frameCamera.position.z, -DORM_BOUNDS, DORM_BOUNDS);
+    } else if (stage === 2) {
+      frameCamera.position.x = THREE.MathUtils.clamp(frameCamera.position.x, -LECTURE_BOUNDS, LECTURE_BOUNDS);
+      frameCamera.position.z = THREE.MathUtils.clamp(frameCamera.position.z, -LECTURE_BOUNDS, LECTURE_BOUNDS);
+    } else {
+      frameCamera.position.x = THREE.MathUtils.clamp(frameCamera.position.x, -LIBRARY_BOUNDS_X, LIBRARY_BOUNDS_X);
+      frameCamera.position.z = THREE.MathUtils.clamp(frameCamera.position.z, -LIBRARY_BOUNDS_Z, LIBRARY_BOUNDS_Z);
+    }
+
+    // ── HEIGHT & STAIR CLIMBING LOGIC (STAGE 2) ──
+    let targetY = 0;
+    if (stage === 2) {
+      if (nextPosition.z > 13.0) {
+        // Climbing UP the seating tiers
+        const row = Math.floor((nextPosition.z - 13.0) / 1.1);
+        const clampedRow = Math.max(0, Math.min(4, row)); 
+        targetY = clampedRow * 0.4;
+      } else if (nextPosition.z < -9.5) {
+        // Stepping DOWN into the sunken stage area
+        targetY = -1.2; 
+      }
+    }
+    // Smooth interpolation so you "step up" and "step down" smoothly
+    frameCamera.position.y = THREE.MathUtils.lerp(frameCamera.position.y, targetY, 0.15);
 
     // Update Minimap
     if (stage === 3 && onPositionUpdate) {
       const now = performance.now();
       if (now - positionThrottleRef.current < 100) return;
-      const { x, z } = camera.position;
+      const { x, z } = frameCamera.position;
       const dx = Math.abs(x - lastReportedRef.current.x);
       const dz = Math.abs(z - lastReportedRef.current.z);
       if (dx > 0.08 || dz > 0.08) {
@@ -172,7 +196,7 @@ function Player({ stage, onPositionUpdate, resetNonce = 0 }) {
 }
 
 // ─── Flashlight ───────────────────────────────────────────────────────────────
-export function Flashlight({ isBlackout }) {
+export function Flashlight({ isBlackout, isOn }) {
   const lightRigRef = useRef(null);
   const spotRef = useRef(null);
   const { camera, scene } = useThree();
@@ -196,13 +220,12 @@ export function Flashlight({ isBlackout }) {
       <spotLight
         ref={spotRef}
         color="#fafff0"
-        intensity={isBlackout ? 0 : 800} // Much brighter core
-        angle={Math.PI / 6} // Wider beam
+        intensity={(!isOn || isBlackout) ? 0 : 800} // Respects T toggle
+        angle={Math.PI / 6}
         penumbra={0.5}
-        distance={400} // Increased distance to hit far walls!
-        decay={1.2} // Lower decay so light travels further
+        distance={400} 
+        decay={1.2} 
       />
-      {/* Increased ambient glow around the player so you are never in pitch black */}
       <pointLight intensity={isBlackout ? 0 : 60} distance={15} color="#ffffff" decay={1.5} />
     </group>
   );
@@ -213,7 +236,10 @@ export default function App() {
   const [gamePhase, setGamePhase] = useState('menu'); // 'menu' | 'game'
   const [currentStage, setCurrentStage] = useState(1);
   const [activeOverlay, setActiveOverlay] = useState(null);
+  
   const [inventory, setInventory] = useState([]);
+  const [isInventoryVisible, setIsInventoryVisible] = useState(true);
+  
   const [passcodeInput, setPasscodeInput] = useState('');
   const [isLockerUnlocked, setIsLockerUnlocked] = useState(false);
   const [showWhisper, setShowWhisper] = useState(false);
@@ -227,13 +253,17 @@ export default function App() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [libraryResetNonce, setLibraryResetNonce] = useState(0);
   
-  // New States for Lore & Horror
-  const [transitionState, setTransitionState] = useState(null); // 'toStage2', 'toStage3'
+  const [transitionState, setTransitionState] = useState(null); 
   const [showKnock, setShowKnock] = useState(false);
   const [isBlackout, setIsBlackout] = useState(false);
+  const [isFlashlightOn, setIsFlashlightOn] = useState(true);
+
+  // Connect state to your custom stage 2 reducer pattern
+  const [stage2State, dispatchStage2] = useReducer(lectureHallReducer, INITIAL_PUZZLE_STATE);
 
   const sequenceErrorTimerRef = useRef(null);
   const objectiveTimerRef = useRef(null);
+  const ambientAudioRef = useRef(null);
 
   const clearSequenceErrorTimer = () => {
     if (sequenceErrorTimerRef.current) {
@@ -244,6 +274,53 @@ export default function App() {
 
   useEffect(() => () => clearSequenceErrorTimer(), []);
 
+  // 🎵 Key Binds (T for Flashlight, I for Inventory)
+  useEffect(() => {
+    const handleKeyBinds = (e) => {
+      if (gamePhase === 'game') {
+        if (e.code === 'KeyT') {
+          setIsFlashlightOn((prev) => !prev);
+          playSFX('click.wav', 0.8);
+        }
+        if (e.code === 'KeyI') {
+          setIsInventoryVisible((prev) => !prev);
+          playSFX('slide.wav', 0.5);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyBinds);
+    return () => window.removeEventListener('keydown', handleKeyBinds);
+  }, [gamePhase]);
+
+  // 🎵 Ambient Audio Controller
+  useEffect(() => {
+    if (gamePhase !== 'game') return;
+
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.pause();
+      ambientAudioRef.current = null;
+    }
+
+    let track = '';
+    if (currentStage === 1) track = 'atmospheric_rain_wind.wav';
+    if (currentStage === 2) track = 'machine_hum.wav';
+    if (currentStage === 3) track = 'low_frequency_room_tone.flac';
+
+    if (track) {
+      ambientAudioRef.current = new Audio(`/${track}`);
+      ambientAudioRef.current.loop = true;
+      ambientAudioRef.current.volume = 0.3;
+      ambientAudioRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+    }
+
+    return () => {
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
+      }
+    };
+  }, [currentStage, gamePhase, isGameOver, isGameBeaten]);
+
+  // 🎵 Objectives & Horror Events
   useEffect(() => {
     const stageObjectives = {
       1: 'Find a way out. The timetable holds the key.',
@@ -265,7 +342,15 @@ export default function App() {
     if (currentStage === 1) {
       const knockTimer = setTimeout(() => {
         setShowKnock(true);
-        setTimeout(() => setShowKnock(false), 2000);
+        playSFX('rattle_metal_lockers.wav', 1.0);
+        
+        // Audio Ducking: Lower rain volume
+        if (ambientAudioRef.current) ambientAudioRef.current.volume = 0.1;
+
+        setTimeout(() => {
+          setShowKnock(false);
+          if (ambientAudioRef.current) ambientAudioRef.current.volume = 0.3;
+        }, 2000);
       }, 12000);
       return () => clearTimeout(knockTimer);
     }
@@ -274,6 +359,7 @@ export default function App() {
     if (currentStage === 3) {
       const blackoutTimer = setTimeout(() => {
         setIsBlackout(true);
+        playSFX('bass_drop.wav', 1.0);
         setTimeout(() => setIsBlackout(false), 3000);
       }, 15000); // 15 seconds after entering
       return () => clearTimeout(blackoutTimer);
@@ -291,6 +377,8 @@ export default function App() {
   const handleStaffCaught = useCallback(() => {
     setIsGameOver(true);
     setActiveOverlay(null);
+    playSFX('bass_drop.wav', 1.0);
+    setTimeout(() => playSFX('metallic_screeches.mp3', 0.8), 500);
   }, []);
 
   const handleRestartStage = () => {
@@ -321,40 +409,53 @@ export default function App() {
     setIsGameOver(false);
     setLibraryResetNonce((n) => n + 1);
     setEnemyPosition(normalizeLibraryPosition(STAFF_PATROL_X, 0));
+    
+    // FIX: Completely reset the Stage 2 puzzle state
+    dispatchStage2({ type: 'RESET' });
   };
 
-  // Whisper Effect Logic
+  // 🎵 Whisper Effect Logic
   useEffect(() => {
-    if (isGameBeaten || isGameOver) return;
+    if (isGameBeaten || isGameOver || gamePhase !== 'game') return;
     let showTimer, hideTimer;
     const scheduleWhisper = () => {
       const nextDelay = 15000 + Math.random() * 15000;
       showTimer = setTimeout(() => {
         setShowWhisper(true);
+        playSFX('distorted_reversed_whispers.mp3', 0.8);
+        
+        // Audio Ducking
+        if (ambientAudioRef.current) ambientAudioRef.current.volume = 0.1;
+
         hideTimer = setTimeout(() => {
           setShowWhisper(false);
+          if (ambientAudioRef.current) ambientAudioRef.current.volume = 0.3;
           scheduleWhisper();
-        }, 2000);
+        }, 3000);
       }, nextDelay);
     };
     scheduleWhisper();
     return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
-  }, [isGameBeaten, isGameOver]);
+  }, [isGameBeaten, isGameOver, gamePhase]);
 
   const [lockerError, setLockerError] = useState(false);
 
   const handleLockerDigit = (digit) => {
     if (isLockerUnlocked) return;
+    playSFX('beep.wav', 0.5);
+
     const next = (passcodeInput + digit).slice(0, 3);
     setPasscodeInput(next);
     if (next.length === 3) {
       if (next === '313') {
+        playSFX('slide.wav', 1.0);
         setIsLockerUnlocked(true);
         setLockerError(false);
         if (!inventory.includes('Keycard')) {
           setInventory(prev => [...prev, 'Keycard']);
         }
       } else {
+        playSFX('error.wav', 0.6);
         setLockerError(true);
         setTimeout(() => {
           setPasscodeInput('');
@@ -365,6 +466,7 @@ export default function App() {
   };
 
   const handleLockerClear = () => {
+    playSFX('beep.wav', 0.5);
     setPasscodeInput('');
     setLockerError(false);
   };
@@ -377,11 +479,13 @@ export default function App() {
 
   const handleProjectorFileClick = (fileId) => {
     if (sequenceError || fileSequence.includes(fileId)) return;
+    playSFX('click.wav', 0.7);
 
     const nextIndex = fileSequence.length;
     const expectedId = PROJECTOR_CORRECT_ORDER[nextIndex];
 
     if (fileId !== expectedId) {
+      playSFX('error.wav', 0.8);
       setSequenceError(true);
       setFileSequence([]);
       clearSequenceErrorTimer();
@@ -398,6 +502,7 @@ export default function App() {
 
     if (nextSequence.length === PROJECTOR_CORRECT_ORDER.length) {
       // TRANSITION to Stage 3
+      playSFX('old_church_door_open.wav', 1.0);
       setActiveOverlay(null);
       resetProjectorPuzzle();
       setTransitionState('toStage3');
@@ -411,16 +516,21 @@ export default function App() {
   const handleArchiveKeypadSubmit = (e) => {
     e.preventDefault();
     if (archiveCodeInput === LIBRARY_ARCHIVE_CODE) {
+      playSFX('slide.wav', 1.0);
+      setTimeout(() => playSFX('metallic_screeches.mp3', 0.8), 1500);
+
       setIsGameBeaten(true);
       setActiveOverlay(null);
       setArchiveCodeInput('');
     } else {
+      playSFX('error.wav', 0.8);
       alert('ACCESS DENIED. THE SHADOW GROWS CLOSER.');
       setArchiveCodeInput('');
     }
   };
 
   const closeOverlay = () => {
+    playSFX('click.wav', 0.5);
     setActiveOverlay(null);
     if (activeOverlay === 'projector') resetProjectorPuzzle();
     if (activeOverlay === 'archive_keypad') setArchiveCodeInput('');
@@ -431,11 +541,19 @@ export default function App() {
   }
 
   if (isGameBeaten) {
-    return <OutroCinematic onPlayAgain={handlePlayAgain} />;
+    return (
+      <div className="game-container game-container--ending">
+        {/* Changed to use your imported OutroCinematic! */}
+        <OutroCinematic onPlayAgain={handlePlayAgain} />
+      </div>
+    );
   }
 
-  // Keep the core stage-progression engine here
+  // 🎵 Keep the core stage-progression engine here
   const handleStage1Escape = () => {
+    playSFX('creaky_door_open.wav', 1.0);
+    setTimeout(() => playSFX('bass_drop.wav', 1.0), 1000);
+
     setTransitionState('toStage2');
     setTimeout(() => {
       setCurrentStage(2);
@@ -479,35 +597,50 @@ export default function App() {
       {!isGameOver && (
         <div className="canvas-container">
           <Canvas camera={{ position: [0, 0, 0], fov: 75 }}>
-            <PointerLockControls />
+            {/* FIX: Only try to lock the mouse when 2D overlays are closed to avoid pointer lock exceptions */}
+            {activeOverlay === null && <PointerLockControls />}
             <Player stage={currentStage} resetNonce={libraryResetNonce} onPositionUpdate={currentStage === 3 ? handlePlayerPositionUpdate : undefined} />
-            <Flashlight isBlackout={isBlackout} />
+            <Flashlight isBlackout={isBlackout} isOn={isFlashlightOn} />
 
           {/* STAGE 1 */}
             {currentStage === 1 && (
               <DormRoom 
               inventory={inventory} 
-              onObjectClick={setActiveOverlay} 
+              onObjectClick={(obj) => { playSFX('click.wav', 0.5); setActiveOverlay(obj); }} 
               onEscape={handleStage1Escape}
               />
-      )}
+            )}
           {/* STAGE 2 */}
             {currentStage === 2 && 
             <LectureHall 
-            onObjectClick={setActiveOverlay
-            } />}
+              puzzleState={stage2State}
+              onPuzzleUpdate={dispatchStage2}
+              onObjectClick={(obj) => { 
+                if (obj === 'stage2_complete') {
+                  playSFX('old_church_door_open.wav', 1.0);
+                  setTransitionState('toStage3');
+                  setTimeout(() => { setCurrentStage(3); setTransitionState(null); }, 5000);
+                  return;
+                }
+                playSFX('click.wav', 0.5); 
+                setActiveOverlay(obj); 
+              }} 
+            />}
 
             {/* STAGE 3 */}
             {currentStage === 3 && (
               <MainLibrary 
               key={libraryResetNonce} 
               inventory={inventory} 
-              onObjectClick={setActiveOverlay} 
+              onObjectClick={(obj) => { playSFX('click.wav', 0.5); setActiveOverlay(obj); }} 
               onCaught={handleStaffCaught} 
               onEnemyPositionUpdate={handleEnemyPositionUpdate} 
               isBlackout={isBlackout} 
               onBookCollect={(title) => {
-                if (!inventory.includes(title)) setInventory([...inventory, title]);
+                if (!inventory.includes(title)) {
+                  playSFX('thud_falling_book.wav', 0.8);
+                  setInventory([...inventory, title]);
+                }
               }} />
             )}
           </Canvas>
@@ -529,6 +662,7 @@ export default function App() {
           {currentStage === 3 && 'Perpustakaan Utama'}
         </h2>
         
+        {isInventoryVisible && (
         <div className="inventory-box">
           <p style={{ margin: '0 0 10px 0' }}>Inventory:</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
@@ -538,7 +672,12 @@ export default function App() {
               inventory.map((item) => {
                 const book = LIBRARY_HIDDEN_BOOKS.find(b => b.title === item);
                 return (
-                  <button key={item} className="item-tag" onClick={() => { if (book) setActiveOverlay(book.id); }} style={{ border: 'none', color: 'white', fontFamily: 'inherit', textAlign: 'left', cursor: book ? 'pointer' : 'default', width: '100%' }}>
+                  <button key={item} className="item-tag" onClick={() => { 
+                    if (book) {
+                      playSFX('slide.wav', 0.3);
+                      setActiveOverlay(book.id); 
+                    }
+                  }} style={{ border: 'none', color: 'white', fontFamily: 'inherit', textAlign: 'left', cursor: book ? 'pointer' : 'default', width: '100%' }}>
                     {item}
                   </button>
                 );
@@ -546,7 +685,13 @@ export default function App() {
             )}
           </div>
         </div>
+        )}
         
+        <p className="hint-text">Click screen to lock mouse. Press ESC to unlock.</p>
+        <p className="hint-text">WASD to walk. Click objects to inspect.</p>
+        <p className="hint-text" style={{color: '#ffcc00'}}>Press 'T' to toggle Flashlight.</p>
+        <p className="hint-text" style={{color: '#ffcc00'}}>Press 'I' to toggle Inventory.</p>
+
         {currentStage === 3 && (
           <div className="minimap-container" aria-label="Library survival radar">
             {LIBRARY_BOOKSHELVES.map((shelf) => (
@@ -647,27 +792,27 @@ export default function App() {
                     <tbody>
                       <tr>
                         <th>08:00</th>
-                        <td>GIG1003</td>
-                        <td className="clue-slot"><span className="clue-digit">3</span>WIA2004</td>
+                        <td>MPU3123</td>
+                        <td className="clue-slot"><span className="clue-digit">3</span>QTK1013</td>
                         <td>—</td>
                         <td>WIA1001</td>
                         <td>—</td>
                       </tr>
                       <tr>
                         <th>10:00</th>
-                        <td>WIG2005</td>
+                        <td>SECJ2013</td>
                         <td>—</td>
                         <td className="clue-slot"><span className="clue-digit">1</span>WIX2002</td>
-                        <td>WIA2004</td>
+                        <td>SECJ2013</td>
                         <td>—</td>
                       </tr>
                       <tr>
                         <th>14:00</th>
-                        <td>TEST</td>
+                        <td>Lab</td>
                         <td>—</td>
-                        <td>TEST II</td>
+                        <td>Tutorial</td>
                         <td>—</td>
-                        <td className="clue-slot"><span className="clue-digit">3</span>LAB</td>
+                        <td className="clue-slot"><span className="clue-digit">3</span>Consultation</td>
                       </tr>
                     </tbody>
                   </table>
@@ -689,6 +834,20 @@ export default function App() {
               </div>
             )}
 
+            {/* === STAGE 2: PROJECTOR SYSTEM OVERLAY === */}
+            {activeOverlay === 'projector' && (
+              <ProjectorPuzzleOverlay 
+                isOpen={true} 
+                puzzleState={stage2State} 
+                onDispatch={(action) => {
+                  playSFX('beep.wav', 0.5);
+                  dispatchStage2(action);
+                }} 
+                onClose={closeOverlay} 
+              />
+            )}
+
+            {/* === STAGE 3: TERMINAL === */}
             {activeOverlay === 'library_terminal' && (
               <div className="library-terminal-ui">
                 <div className="library-terminal-screen">
@@ -732,41 +891,6 @@ export default function App() {
               </div>
             )}
 
-            {activeOverlay === 'projector' && (
-              <div className="terminal-ui">
-                <div className="terminal-screen">
-                  <div className="terminal-header">
-                    <span className="terminal-blink">█</span>
-                    <span>UM_SECURE_ARCHIVE // RECOVERY_MODE</span>
-                  </div>
-                  <p className="terminal-prompt">&gt; REBUILD_TIMELINE.exe --corrupted</p>
-                  <p className="terminal-subtext">Three fragments detected. Reconstruct chronological sequence to decrypt.</p>
-                  <div className="terminal-sequence">
-                    SEQUENCE: [{fileSequence.map((id) => id.toUpperCase()).join(' → ') || 'AWAITING INPUT'}]
-                  </div>
-                  <ul className="terminal-files">
-                    {PROJECTOR_FILES.map((file) => {
-                      const orderIndex = fileSequence.indexOf(file.id);
-                      return (
-                        <li key={file.id}>
-                          <button
-                            type="button"
-                            className={`terminal-file ${orderIndex >= 0 ? 'selected' : ''}`}
-                            onClick={() => handleProjectorFileClick(file.id)}
-                            disabled={sequenceError || orderIndex >= 0}
-                          >
-                            <span className="terminal-file-id">[{file.id.toUpperCase()}]</span>
-                            <span className="terminal-file-corrupt">{file.corrupt}</span>
-                            <span className="terminal-file-label">{file.label}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {sequenceError && <p className="terminal-error" role="alert">ACCESS DENIED - SEQUENCE ERROR</p>}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Mainmenu.css';
 
 import friendNeutral from '/src/assets/10.png';   
 import friendShocked from '/src/assets/7.png';    
 import friendDoubtful from '/src/assets/9.png';  
+
+// ─── Global SFX Helper ────────────────────────────────────────────────────────
+const playSFX = (fileName, volume = 1.0) => {
+  const audio = new Audio(`/${fileName}`);
+  audio.volume = volume;
+  audio.play().catch((e) => console.log('Audio blocked by browser:', e));
+};
 
 // ─── Storyline Dialogues ───────────────────────────────────────────────────────
 const STORY_DIALOGUES = [
@@ -101,7 +108,7 @@ function TypewriterText({ text, onDone, speed = 28 }) {
       }
     }, speed);
     return () => clearInterval(timer);
-  }, [text]);
+  }, [text, speed, onDone]);
 
   return (
     <span className="typewriter-text">
@@ -137,10 +144,10 @@ function MainMenuScreen({ onPlay, onInstructions }) {
         <h1 className="menu-title">UM<span className="menu-title-accent"> ESCAPE</span></h1>
         <p className="menu-tagline">Some truths refuse to stay buried.</p>
         <nav className="menu-buttons">
-          <button className="menu-btn menu-btn--primary" onClick={onPlay}>
+          <button className="menu-btn menu-btn--primary" onClick={() => { playSFX('click.wav', 0.6); onPlay(); }}>
             ▶ &nbsp;PLAY
           </button>
-          <button className="menu-btn" onClick={onInstructions}>
+          <button className="menu-btn" onClick={() => { playSFX('click.wav', 0.6); onInstructions(); }}>
             ? &nbsp;INSTRUCTIONS
           </button>
         </nav>
@@ -181,7 +188,7 @@ function InstructionsScreen({ onBack }) {
             <p>Explore three locations. Solve puzzles. Uncover the truth behind Maya Rahman's disappearance.</p>
           </div>
         </div>
-        <button className="menu-btn" style={{ marginTop: '2rem' }} onClick={onBack}>
+        <button className="menu-btn" style={{ marginTop: '2rem' }} onClick={() => { playSFX('click.wav', 0.6); onBack(); }}>
           ← Back
         </button>
       </div>
@@ -197,8 +204,30 @@ function StorylineScreen({ onComplete }) {
   const current = STORY_DIALOGUES[index];
   const isLast = index === STORY_DIALOGUES.length - 1;
 
+  // 🎵 HORROR AUDIO CUES DURING DIALOGUE
+  useEffect(() => {
+    if (!current) return;
+    
+    // Play the email ping when the email appears
+    if (current.isEmail) {
+      playSFX('mail_ping_placeholder.wav', 1.0);
+    }
+    
+    // Play reversed whispers when the whispering text appears
+    if (current.isWhisper) {
+      playSFX('distorted_reversed_whispers.mp3', 0.8);
+    }
+    
+    // Final bass drop before teleporting into the game
+    if (isLast) {
+      playSFX('bass_drop.wav', 1.0);
+    }
+  }, [current, index]);
+
   const advance = () => {
     if (!ready) return;
+    playSFX('click.wav', 0.4);
+    
     if (isLast) {
       onComplete();
     } else {
@@ -216,7 +245,11 @@ function StorylineScreen({ onComplete }) {
       {/* Skip button — top right */}
       <button
         className="storyline-skip"
-        onClick={(e) => { e.stopPropagation(); onComplete(); }}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          playSFX('click.wav', 0.6);
+          onComplete(); 
+        }}
       >
         SKIP ▶▶
       </button>
@@ -224,8 +257,7 @@ function StorylineScreen({ onComplete }) {
       {/* Character portrait — bottom right of box area */}
       {showPortrait && (
         <div className="storyline-portrait">
-          {/* This directly injects the safely imported picture variable */}
-        <img src={current.portraitImg} alt={current.speaker} />
+          <img src={current.portraitImg} alt={current.speaker} />
         </div>
       )}
 
@@ -282,15 +314,48 @@ function StorylineScreen({ onComplete }) {
 // phase: 'logo' → 'menu' → 'instructions' → 'story' → 'game'
 export default function MainMenuController({ onStartGame }) {
   const [phase, setPhase] = useState('logo');
+  const bgmRef = useRef(null);
+
+  // 🎵 MAIN MENU BGM LOBBY MUSIC
+  useEffect(() => {
+    // Start background music when the main menu mounts
+    bgmRef.current = new Audio('/main_menu_starting_scene.mp3');
+    bgmRef.current.loop = true;
+    bgmRef.current.volume = 0.5;
+    
+    // Auto-play might be blocked by browser policy until interaction,
+    // so we catch the promise rejection silently.
+    bgmRef.current.play().catch(e => console.log('BGM waiting for user interaction.'));
+
+    return () => {
+      // Cleanup: Stop the music completely when transitioning into the actual game
+      if (bgmRef.current) {
+        bgmRef.current.pause();
+        bgmRef.current = null;
+      }
+    };
+  }, []);
+
+  // Helper to ensure BGM plays after an interaction if it was blocked initially
+  const handleUserInteraction = (nextPhase) => {
+    if (bgmRef.current && bgmRef.current.paused) {
+      bgmRef.current.play().catch(e => {});
+    }
+    setPhase(nextPhase);
+  };
 
   if (phase === 'logo') return <LogoScreen onDone={() => setPhase('menu')} />;
+  
   if (phase === 'menu') return (
     <MainMenuScreen
-      onPlay={() => setPhase('story')}
-      onInstructions={() => setPhase('instructions')}
+      onPlay={() => handleUserInteraction('story')}
+      onInstructions={() => handleUserInteraction('instructions')}
     />
   );
-  if (phase === 'instructions') return <InstructionsScreen onBack={() => setPhase('menu')} />;
+  
+  if (phase === 'instructions') return <InstructionsScreen onBack={() => handleUserInteraction('menu')} />;
+  
   if (phase === 'story') return <StorylineScreen onComplete={onStartGame} />;
+  
   return null;
 }
